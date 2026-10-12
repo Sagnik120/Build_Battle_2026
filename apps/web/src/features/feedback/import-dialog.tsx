@@ -239,3 +239,5 @@ export function ImportDialog({ open, onOpenChange }: { open: boolean; onOpenChan
     </Dialog>
   );
 }
+
+// InsightFlow build iteration: commit 258
