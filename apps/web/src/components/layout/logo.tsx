@@ -24,3 +24,5 @@ export function Logo({ className }: { className?: string }) {
     </span>
   );
 }
+
+// InsightFlow build iteration: commit 241
