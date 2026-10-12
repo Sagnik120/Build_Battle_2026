@@ -320,3 +320,5 @@ export function InsightsView() {
     </>
   );
 }
+
+// InsightFlow build iteration: commit 271
