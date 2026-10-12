@@ -117,3 +117,5 @@ The suite passes on SQLite and on Postgres under both profiles.
 <!-- InsightFlow build iteration: commit 326 -->
 
 <!-- InsightFlow build iteration: commit 327 -->
+
+<!-- InsightFlow build iteration: commit 328 -->
