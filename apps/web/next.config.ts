@@ -16,3 +16,5 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+
+// InsightFlow build iteration: commit 325
