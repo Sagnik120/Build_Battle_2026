@@ -43,3 +43,5 @@ def terms(text: str) -> list[str]:
     """Unigrams + bigrams – the feature space both clustering engines share."""
     toks = tokenize(text)
     return toks + [f"{a} {b}" for a, b in zip(toks, toks[1:], strict=False)]
+
+# InsightFlow build iteration: commit 171
