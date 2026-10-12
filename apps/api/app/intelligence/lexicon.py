@@ -124,3 +124,5 @@ INTENSIFIERS: dict[str, float] = {
     "slightly": 0.6, "minor": 0.5, "somewhat": 0.7, "little": 0.7, "thoda": 0.6,
 }
 CONTRAST = frozenset({"but", "however", "although", "though", "yet", "lekin", "par", "magar"})
+
+# InsightFlow build iteration: commit 163
