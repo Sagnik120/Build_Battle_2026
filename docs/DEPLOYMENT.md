@@ -66,5 +66,3 @@ Web (`apps/web/.env.local`): `NEXT_PUBLIC_API_URL`.
 - Shared report links are unguessable tokens, not access-controlled.
 - Schema is created with `create_all`; there are no migrations yet.
 - One API instance. The background poller (local profile) assumes a single process.
-
-<!-- InsightFlow build iteration: commit 332 -->

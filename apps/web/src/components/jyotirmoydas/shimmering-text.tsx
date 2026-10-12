@@ -67,5 +67,3 @@ export function ShimmeringText({
     </motion.span>
   );
 }
-
-// InsightFlow build iteration: commit 237

@@ -16,5 +16,3 @@ const eslintConfig = defineConfig([
 ]);
 
 export default eslintConfig;
-
-// InsightFlow build iteration: commit 339

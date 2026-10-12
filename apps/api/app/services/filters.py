@@ -81,7 +81,3 @@ def filter_params(
         theme_ids=theme, sources=source, severities=severity, resolution=resolution,
         complaints_only=complaints_only, q=q,
     )
-
-# InsightFlow build iteration: commit 178
-
-# InsightFlow build iteration: commit 312

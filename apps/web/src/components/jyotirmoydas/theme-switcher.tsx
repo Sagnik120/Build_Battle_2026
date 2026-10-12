@@ -175,5 +175,3 @@ function ThemeSwitcher({
 
 export { ThemeSwitcher };
 export type { ThemeSwitcherProps };
-
-// InsightFlow build iteration: commit 234

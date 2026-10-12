@@ -135,11 +135,3 @@ def rebuild_emerging_themes(db: Session) -> int:
     if stale:
         db.execute(delete(Theme).where(Theme.id.in_(stale)))
     return created
-
-# InsightFlow build iteration: commit 175
-
-# InsightFlow build iteration: commit 182
-
-# InsightFlow build iteration: commit 198
-
-# InsightFlow build iteration: commit 342

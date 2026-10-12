@@ -7,5 +7,3 @@ export const metadata: Metadata = { title: "Dashboard" };
 export default function Page() {
   return <DashboardView />;
 }
-
-// InsightFlow build iteration: commit 301

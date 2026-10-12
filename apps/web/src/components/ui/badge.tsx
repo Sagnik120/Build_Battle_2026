@@ -46,5 +46,3 @@ function Badge({
 }
 
 export { Badge, badgeVariants }
-
-// InsightFlow build iteration: commit 227

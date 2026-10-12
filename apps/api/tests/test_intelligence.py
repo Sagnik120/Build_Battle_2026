@@ -79,9 +79,3 @@ def test_priority_orders_by_harm_and_explains_itself():
     assert fraud.score > praise_adjacent.score
     assert fraud.tier == "P0" and fraud.reasons
     assert revenue_at_risk({4: 10}, 1000, {4: 0.5}) == 5000
-
-# InsightFlow build iteration: commit 205
-
-# InsightFlow build iteration: commit 206
-
-# InsightFlow build iteration: commit 347

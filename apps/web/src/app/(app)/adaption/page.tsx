@@ -7,5 +7,3 @@ export const metadata: Metadata = { title: "Adaption" };
 export default function Page() {
   return <AdaptionView />;
 }
-
-// InsightFlow build iteration: commit 306

@@ -263,5 +263,3 @@ GENERIC = Playbook(
 
 def get_playbook(slug: str) -> Playbook:
     return PLAYBOOKS.get(slug, GENERIC)
-
-# InsightFlow build iteration: commit 166

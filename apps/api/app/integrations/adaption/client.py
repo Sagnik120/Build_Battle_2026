@@ -124,5 +124,3 @@ def get_client() -> AdaptionClient:
     if sdk_version() is None:
         raise AppError("The adaption SDK is not installed on the API.", code="adaption_sdk_missing")
     return AdaptionClient(settings.adaption_api_key, settings.adaption_base_url)
-
-# InsightFlow build iteration: commit 183

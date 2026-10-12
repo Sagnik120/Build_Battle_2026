@@ -192,5 +192,3 @@ def to_csv(report: Report) -> str:
              first.get("title", ""), first.get("owner", "")]
         )
     return buffer.getvalue()
-
-# InsightFlow build iteration: commit 181

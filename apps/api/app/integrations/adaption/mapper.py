@@ -167,5 +167,3 @@ def map_rows(rows: list[dict], ref_index: dict[str, str]) -> tuple[list[Enrichme
         else:
             unmatched += 1
     return list(results.values()), unmatched
-
-# InsightFlow build iteration: commit 186

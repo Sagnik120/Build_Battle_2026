@@ -54,7 +54,3 @@ class SklearnClusterer:
             top = vocab[np.argsort(centers[c])[::-1][:6]].tolist()
             clusters.append(Cluster(members=members, top_terms=top))
         return clusters
-
-# InsightFlow build iteration: commit 168
-
-# InsightFlow build iteration: commit 169

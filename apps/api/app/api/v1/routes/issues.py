@@ -30,7 +30,3 @@ def update_issue(issue_id: int, body: IssueUpdate, db: Session = Depends(get_db,
 def delete_issue(issue_id: int, db: Session = Depends(get_db, scope="function")) -> Response:
     issues.delete_issue(db, issue_id)
     return Response(status_code=204)
-
-# InsightFlow build iteration: commit 193
-
-# InsightFlow build iteration: commit 314

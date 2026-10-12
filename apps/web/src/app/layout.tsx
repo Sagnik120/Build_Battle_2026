@@ -38,5 +38,3 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
-
-// InsightFlow build iteration: commit 298

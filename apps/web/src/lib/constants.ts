@@ -54,7 +54,3 @@ export const FACTOR_META: Record<string, { label: string; help: string }> = {
   unresolved: { label: "Unresolved", help: "Share of complaints that mention no fix, refund or follow-up" },
   momentum: { label: "Growth", help: "Increase versus the earlier half of the period" },
 };
-
-// InsightFlow build iteration: commit 217
-
-// InsightFlow build iteration: commit 218

@@ -53,5 +53,3 @@ def register_error_handlers(app: FastAPI) -> None:
             status_code=500,
             content={"error": {"code": "internal_error", "message": "Something went wrong."}},
         )
-
-# InsightFlow build iteration: commit 201

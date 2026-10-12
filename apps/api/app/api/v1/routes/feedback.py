@@ -227,9 +227,3 @@ def _batch_dict(b: ImportBatch) -> dict:
         "distinct_voices": b.distinct_voices, "timeline_simulated": b.timeline_simulated,
         "created_at": iso(b.created_at),
     }
-
-# InsightFlow build iteration: commit 189
-
-# InsightFlow build iteration: commit 190
-
-# InsightFlow build iteration: commit 313

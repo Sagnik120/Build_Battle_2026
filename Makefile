@@ -23,5 +23,3 @@ lint:
 
 build:
 	cd apps/web && pnpm build
-
-# InsightFlow build iteration: commit 333

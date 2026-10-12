@@ -64,5 +64,3 @@ def export_report(
 def get_shared_report(token: str, db: Session = Depends(get_db, scope="function")) -> dict:
     """Read-only access for anyone holding the share link."""
     return reports.serialize(reports.get_report_by_token(db, token))
-
-# InsightFlow build iteration: commit 194

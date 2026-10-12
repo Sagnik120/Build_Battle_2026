@@ -7,5 +7,3 @@ export const metadata: Metadata = { title: "Feedback" };
 export default function Page() {
   return <FeedbackView />;
 }
-
-// InsightFlow build iteration: commit 302

@@ -104,13 +104,3 @@ def revenue_at_risk(unresolved_by_severity: dict[int, int], aov: float, churn: d
     return round(
         sum(count * aov * churn.get(sev, 0.0) for sev, count in unresolved_by_severity.items()), 2
     )
-
-# InsightFlow build iteration: commit 161
-
-# InsightFlow build iteration: commit 162
-
-# InsightFlow build iteration: commit 167
-
-# InsightFlow build iteration: commit 308
-
-# InsightFlow build iteration: commit 340

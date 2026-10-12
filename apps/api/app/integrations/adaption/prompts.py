@@ -62,7 +62,3 @@ def adapt_request(*, max_rows: int | None, reasoning_traces: bool, idempotency_k
         "brand_controls": {"length": "concise", "blueprint": BLUEPRINT},
         "training_type": "instruction_dataset",
     }
-
-# InsightFlow build iteration: commit 184
-
-# InsightFlow build iteration: commit 185
