@@ -95,3 +95,5 @@ POST /adaption/runs · /adaption/runs/{id}/advance|launch|cancel · /adaption/im
 ```
 
 Interactive docs are served at `/docs` on the API.
+
+<!-- InsightFlow build iteration: commit 329 -->
