@@ -196,3 +196,5 @@ def load_sample(db: Session) -> ImportBatch:
     return import_rows(db, parsed, filename="BuildBattle_2026_Customer_Feedback_Dataset.csv", kind="sample")
 
 # InsightFlow build iteration: commit 173
+
+# InsightFlow build iteration: commit 174
