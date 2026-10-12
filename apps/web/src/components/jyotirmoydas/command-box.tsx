@@ -440,3 +440,5 @@ export function useCommandBox({
 
   return { open, setOpen, toggle };
 }
+
+// InsightFlow build iteration: commit 239
