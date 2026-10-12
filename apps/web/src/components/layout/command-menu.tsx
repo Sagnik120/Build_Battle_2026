@@ -99,3 +99,5 @@ export function CommandMenu({ open, onOpenChange }: { open: boolean; onOpenChang
     </CommandBox>
   );
 }
+
+// InsightFlow build iteration: commit 242
