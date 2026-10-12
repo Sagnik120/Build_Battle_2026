@@ -47,3 +47,5 @@ def reset(confirm: str = Query(...), db: Session = Depends(get_db, scope="functi
     for model in (Issue, Report, AdaptionRun, Analysis, Feedback, ImportBatch, Theme):
         db.execute(delete(model))
     return {"status": "reset"}
+
+# InsightFlow build iteration: commit 196
