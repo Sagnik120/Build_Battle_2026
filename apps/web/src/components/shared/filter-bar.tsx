@@ -191,3 +191,5 @@ export function FilterBar({ children }: { children?: React.ReactNode }) {
 }
 
 // InsightFlow build iteration: commit 248
+
+// InsightFlow build iteration: commit 249
