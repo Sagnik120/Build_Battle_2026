@@ -1,0 +1,7 @@
+# Local profile: full engine + test tooling.
+-r base.txt
+scikit-learn>=1.5
+psycopg[binary]>=3.2
+pytest>=8
+httpx>=0.27
+ruff>=0.6
