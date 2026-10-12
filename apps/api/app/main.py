@@ -78,3 +78,5 @@ app.include_router(api_router, prefix="/api/v1")
 @app.get("/", include_in_schema=False)
 def root() -> dict:
     return {"name": settings.app_name, "docs": "/docs", "health": "/api/v1/health"}
+
+# InsightFlow build iteration: commit 202
