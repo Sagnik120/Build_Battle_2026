@@ -139,3 +139,5 @@ def build_recommendations(db: Session, filters: FeedbackFilters, *, limit: int =
             "p1": sum(1 for i in items if i["priority"]["tier"] == "P1"),
         },
     }
+
+# InsightFlow build iteration: commit 179
