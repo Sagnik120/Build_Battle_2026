@@ -145,3 +145,5 @@ def test_unmatched_adaption_file_is_rejected(client, seeded):
     payload = json.dumps({"completion": json.dumps({"sentiment": "positive"}), "feedback": "unknown text"}).encode()
     response = client.post(f"{API}/adaption/import", files={"file": ("bad.jsonl", io.BytesIO(payload))})
     assert response.status_code == 400 and response.json()["error"]["code"] == "adaption_no_match"
+
+# InsightFlow build iteration: commit 207
