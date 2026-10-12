@@ -1,0 +1,3 @@
+# Cloud profile (free tier): no numpy/scikit-learn, Postgres driver included.
+-r base.txt
+psycopg[binary]>=3.2
