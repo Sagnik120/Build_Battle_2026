@@ -66,3 +66,5 @@ def init_db() -> None:
     from app import models  # noqa: F401  (register mappers)
 
     Base.metadata.create_all(bind=engine)
+
+# InsightFlow build iteration: commit 200
