@@ -1,0 +1,24 @@
+# Render blueprint: free-tier API for InsightFlow.
+# New + → Blueprint → pick this repo. Then fill in the three `sync: false` values.
+services:
+  - type: web
+    name: insightflow-api
+    runtime: python
+    plan: free
+    rootDir: apps/api
+    buildCommand: pip install -r requirements/cloud.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: APP_PROFILE
+        value: cloud
+      - key: DATABASE_URL # Neon / Supabase Postgres connection string
+        sync: false
+      - key: CORS_ORIGINS # https://<your-app>.vercel.app
+        sync: false
+      - key: CORS_ORIGIN_REGEX
+        value: https://.*\.vercel\.app
+      - key: ADAPTION_API_KEY
+        sync: false
