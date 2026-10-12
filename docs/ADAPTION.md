@@ -106,3 +106,5 @@ apps/api/app/integrations/adaption/
 apps/api/app/api/v1/routes/adaption.py
 apps/web/src/features/adaption/adaption-view.tsx
 ```
+
+<!-- InsightFlow build iteration: commit 331 -->
