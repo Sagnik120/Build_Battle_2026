@@ -67,3 +67,5 @@ async def import_adapted(file: UploadFile = File(...), db: Session = Depends(get
     if len(raw) > _MAX_EXPORT_BYTES:
         raise AppError("The adapted file is too large.", code="file_too_large", status_code=413)
     return service.serialize(service.import_manual(db, raw, file.filename or "adapted"))
+
+# InsightFlow build iteration: commit 195
