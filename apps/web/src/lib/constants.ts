@@ -56,3 +56,5 @@ export const FACTOR_META: Record<string, { label: string; help: string }> = {
 };
 
 // InsightFlow build iteration: commit 217
+
+// InsightFlow build iteration: commit 218
