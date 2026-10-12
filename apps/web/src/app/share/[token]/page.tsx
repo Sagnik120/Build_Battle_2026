@@ -7,3 +7,5 @@ export const metadata: Metadata = { title: "Shared insight report", robots: { in
 export default function Page() {
   return <SharedReportView />;
 }
+
+// InsightFlow build iteration: commit 300
