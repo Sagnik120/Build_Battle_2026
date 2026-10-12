@@ -107,3 +107,5 @@ class LiteClusterer:
             top = sorted(centroid.items(), key=lambda kv: -kv[1])[:6]
             clusters.append(Cluster(members=members, top_terms=[t for t, _ in top]))
         return clusters
+
+# InsightFlow build iteration: commit 170
