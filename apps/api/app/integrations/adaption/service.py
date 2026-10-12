@@ -305,3 +305,5 @@ def import_manual(db: Session, raw: bytes, filename: str) -> AdaptionRun:
     run.rows_sent = run.rows_merged + run.rows_unmatched
     db.flush()
     return run
+
+# InsightFlow build iteration: commit 187
