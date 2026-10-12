@@ -7,3 +7,5 @@ export const metadata: Metadata = { title: "Reports" };
 export default function Page() {
   return <ReportsView />;
 }
+
+// InsightFlow build iteration: commit 305
