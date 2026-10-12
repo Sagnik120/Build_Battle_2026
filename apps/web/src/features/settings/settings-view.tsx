@@ -171,3 +171,5 @@ export function SettingsView() {
     </>
   );
 }
+
+// InsightFlow build iteration: commit 295
