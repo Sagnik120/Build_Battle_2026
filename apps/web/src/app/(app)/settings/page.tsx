@@ -7,3 +7,5 @@ export const metadata: Metadata = { title: "Settings" };
 export default function Page() {
   return <SettingsView />;
 }
+
+// InsightFlow build iteration: commit 307
