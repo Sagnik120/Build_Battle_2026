@@ -154,3 +154,5 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+// InsightFlow build iteration: commit 245
