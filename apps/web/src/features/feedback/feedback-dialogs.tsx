@@ -244,3 +244,5 @@ export function FeedbackDetail({ item, onClose, collapsed }: { item: FeedbackIte
     </Sheet>
   );
 }
+
+// InsightFlow build iteration: commit 256
