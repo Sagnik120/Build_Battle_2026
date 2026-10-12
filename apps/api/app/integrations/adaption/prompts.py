@@ -64,3 +64,5 @@ def adapt_request(*, max_rows: int | None, reasoning_traces: bool, idempotency_k
     }
 
 # InsightFlow build iteration: commit 184
+
+# InsightFlow build iteration: commit 185
