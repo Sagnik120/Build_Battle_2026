@@ -52,3 +52,5 @@ def get_assumptions(db: Session = Depends(get_db, scope="function")) -> dict:
 @router.put("/settings/assumptions")
 def put_assumptions(body: AssumptionsUpdate, db: Session = Depends(get_db, scope="function")) -> dict:
     return recommendations.save_assumptions(db, body.model_dump(exclude_none=True))
+
+# InsightFlow build iteration: commit 191
