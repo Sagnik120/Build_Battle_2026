@@ -153,6 +153,23 @@ export function ReportDocument({ report }: { report: Report }) {
                       </ol>
                     </div>
                   </div>
+                  {r.adaption && (r.adaption.root_causes.length > 0 || r.adaption.suggested_actions.length > 0) && (
+                    <div className="mt-3 rounded-md border border-dashed p-3 text-sm">
+                      <h4 className="text-xs font-medium text-muted-foreground">
+                        Root-cause analysis by Adaption · {formatNumber(r.adaption.messages_enriched)} distinct messages
+                      </h4>
+                      {r.adaption.root_causes[0] && (
+                        <p className="mt-1.5">
+                          <span className="font-medium">Likely cause:</span> {r.adaption.root_causes[0]}
+                        </p>
+                      )}
+                      {r.adaption.suggested_actions[0] && (
+                        <p className="mt-1">
+                          <span className="font-medium">Suggested fix:</span> {r.adaption.suggested_actions[0]}
+                        </p>
+                      )}
+                    </div>
+                  )}
                   {r.compliance && <p className="mt-3 rounded-md bg-muted/60 p-2.5 text-xs text-muted-foreground">Compliance (India): {r.compliance}</p>}
                 </div>
               ))}

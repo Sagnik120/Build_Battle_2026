@@ -103,6 +103,7 @@ function KpiRow({ data }: { data: Dashboard }) {
 export function DashboardView() {
   const { filters, carry } = useFilters();
   const query = useQuery({ queryKey: ["dashboard", filters], queryFn: () => api.dashboard({ ...filters }) });
+  const brief = useQuery({ queryKey: ["brief", filters], queryFn: () => api.brief({ ...filters }) });
   const data = query.data;
 
   const withFilter = (extra: Record<string, string | number>) => {
@@ -162,6 +163,19 @@ export function DashboardView() {
         <div className="space-y-4">
           <KpiRow data={data} />
 
+          {brief.data && brief.data.lines.length > 0 && (
+            <Panel title="In short" description="What this feedback says, in plain words">
+              <ul className="grid gap-x-8 gap-y-2 text-sm lg:grid-cols-2">
+                {brief.data.lines.map((line) => (
+                  <li key={line} className="flex gap-2">
+                    <span className="mt-2 size-1 shrink-0 rounded-full bg-muted-foreground" aria-hidden />
+                    <span>{line}</span>
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          )}
+
           {data.meta.timeline_simulated && (
             <p className="flex items-start gap-2 rounded-lg border border-dashed px-3 py-2 text-xs text-muted-foreground">
               <InfoIcon className="mt-0.5 size-3.5 shrink-0" />
@@ -188,7 +202,7 @@ export function DashboardView() {
 
           <Panel
             title="Most reported issues"
-            description="Ranked by priority score: reach, severity, unresolved share and growth"
+            description="Ranked by priority score: reach, severity and unresolved share, plus growth where dates are real"
             action={<MoreLink href={`/insights${carry}`}>Recommendations</MoreLink>}
           >
             {data.top_issues.length ? (

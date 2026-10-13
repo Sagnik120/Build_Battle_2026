@@ -6,7 +6,7 @@ import json
 from datetime import datetime, timezone
 from typing import Literal
 
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Query, UploadFile
 from fastapi.responses import Response
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.errors import AppError, NotFoundError
+from app.integrations.adaption.service import auto_enrich_job
 from app.intelligence.text import clean, fingerprint
 from app.models import Analysis, Feedback, ImportBatch, Theme
 from app.models.mixins import iso
@@ -116,7 +117,10 @@ def get_facets(db: Session = Depends(get_db, scope="function")) -> dict:
 
 
 @router.post("", status_code=201)
-def submit_feedback(body: FeedbackCreate, db: Session = Depends(get_db, scope="function")) -> dict:
+def submit_feedback(
+    body: FeedbackCreate, background: BackgroundTasks, db: Session = Depends(get_db, scope="function")
+) -> dict:
+    background.add_task(auto_enrich_job)
     text = clean(body.text)
     created = body.created_at or datetime.now(timezone.utc)
     if created.tzinfo is None:
@@ -168,8 +172,10 @@ async def import_csv(
     timeline: Literal["spread", "now"] = Form("spread"),
     timeline_days: int = Form(180, ge=7, le=730),
     default_source: str = Form("review"),
+    background: BackgroundTasks = None,
     db: Session = Depends(get_db, scope="function"),
 ) -> dict:
+    background.add_task(auto_enrich_job)
     try:
         mapping_dict = json.loads(mapping or "{}")
     except json.JSONDecodeError as exc:

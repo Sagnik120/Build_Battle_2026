@@ -52,6 +52,11 @@ class Settings(BaseSettings):
     # the local engine and the manual export/import path when it is absent.
     adaption_api_key: str | None = None
     adaption_base_url: str | None = None
+    # Send new, not-yet-enriched messages to Adaption automatically. Bounded so
+    # an open deployment cannot run up the credit bill.
+    adaption_auto_enrich: bool = True
+    adaption_auto_max_credits: float = Field(default=2.0, ge=0)  # per run; dearer runs wait for a click
+    adaption_auto_daily_runs: int = Field(default=10, ge=0)
 
     # Profile-driven knobs (None = take the profile default).
     analysis_engine: Literal["auto", "sklearn", "lite"] | None = None
@@ -60,6 +65,8 @@ class Settings(BaseSettings):
     background_sync: bool | None = None
 
     auto_seed: bool = True
+    # Restore the saved Adaption output for the bundled sample when it is loaded.
+    adaption_sample_snapshot: bool = True
     seed_timeline_days: int = Field(default=180, ge=7, le=730)
 
     @model_validator(mode="after")

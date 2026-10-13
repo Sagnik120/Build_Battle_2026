@@ -11,7 +11,14 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from app.intelligence.lexicon import CONTRAST, INTENSIFIERS, NEGATORS, PHRASES, WORDS
+from app.intelligence.lexicon import (
+    CONTRAST,
+    INTENSIFIERS,
+    NEGATORS,
+    PHRASES,
+    SHORT_NEGATORS,
+    WORDS,
+)
 
 _SPLIT = re.compile(r"[a-zA-Zऀ-ॿ][a-zA-Zऀ-ॿ'\-]*|[.,;!?]")
 _PHRASES_BY_LEN = sorted(PHRASES.items(), key=lambda kv: -len(kv[0]))
@@ -87,7 +94,7 @@ def analyze_sentiment(text: str) -> SentimentResult:
             saw_contrast, negate_left, boost = True, 0, 1.0
             continue
         if tok in NEGATORS:
-            negate_left = _NEGATION_WINDOW
+            negate_left = 1 if tok in SHORT_NEGATORS else _NEGATION_WINDOW
             continue
         if tok in INTENSIFIERS:
             boost = INTENSIFIERS[tok]

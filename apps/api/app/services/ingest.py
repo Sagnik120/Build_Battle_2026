@@ -193,4 +193,8 @@ def import_rows(
 
 def load_sample(db: Session) -> ImportBatch:
     parsed = parse_csv(SAMPLE_CSV.read_bytes())
-    return import_rows(db, parsed, filename="BuildBattle_2026_Customer_Feedback_Dataset.csv", kind="sample")
+    batch = import_rows(db, parsed, filename="BuildBattle_2026_Customer_Feedback_Dataset.csv", kind="sample")
+    from app.integrations.adaption.service import restore_sample_snapshot  # avoids an import cycle
+
+    restore_sample_snapshot(db)
+    return batch

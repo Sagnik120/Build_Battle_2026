@@ -5,7 +5,7 @@ from __future__ import annotations
 import csv
 import io
 import secrets
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -34,11 +34,17 @@ def _inr(value: float) -> str:
     return f"₹{whole}"
 
 
-def _executive_summary(dash: dict, recs: dict) -> list[str]:
+def _day(value: str) -> str:
+    """2026-04-15 -> 15 Apr 2026."""
+    return f"{date.fromisoformat(value):%d %b %Y}".lstrip("0")
+
+
+def executive_summary(dash: dict, recs: dict) -> list[str]:
+    """The findings in plain sentences: used by reports and the dashboard brief."""
     k = dash["kpis"]
     lines = [
-        f"{k['total']:,} pieces of feedback analysed between {dash['window']['start']} and "
-        f"{dash['window']['end']}. Net sentiment is {k['nss']:+.0f} "
+        f"{k['total']:,} pieces of feedback analysed between {_day(dash['window']['start'])} and "
+        f"{_day(dash['window']['end'])}. Net sentiment is {k['nss']:+.0f} "
         f"({k['positive']:,} positive, {k['negative']:,} negative).",
         f"{k['complaint_rate']:.0f}% of feedback is a complaint and {k['unresolved_rate']:.0f}% of "
         f"those complaints describe no resolution.",
@@ -56,6 +62,10 @@ def _executive_summary(dash: dict, recs: dict) -> list[str]:
                 f"priority {r['priority']['score']})" for r in top
             ) + "."
         )
+        insight = top[0].get("adaption") or {}
+        if insight.get("root_causes"):
+            cause = insight["root_causes"][0].rstrip(".")
+            lines.append(f"Likely root cause of the top issue, from Adaption's analysis: {cause}.")
     if recs["totals"]["revenue_at_risk"]:
         lines.append(
             f"Estimated revenue at risk from unresolved complaints: "
@@ -71,7 +81,7 @@ def create_report(db: Session, title: str | None, filters: FeedbackFilters) -> R
     now = datetime.now(timezone.utc)
     payload = {
         "generated_at": now.isoformat(),
-        "summary": [] if dash["empty"] else _executive_summary(dash, recs),
+        "summary": [] if dash["empty"] else executive_summary(dash, recs),
         "dashboard": dash,
         "recommendations": recs,
         "issues": list_issues(db),
@@ -79,7 +89,8 @@ def create_report(db: Session, title: str | None, filters: FeedbackFilters) -> R
             "Sentiment, complaint and resolution signals come from an explainable rule-based "
             "engine; messages enriched by Adaption use its generated analysis instead.",
             "Identical messages are analysed once and counted every time they occur.",
-            "Priority = 35% reach + 30% severity + 20% unresolved rate + 15% growth, on a 0-100 scale.",
+            "Priority = 35% reach + 30% severity + 20% unresolved rate + 15% growth, on a 0-100 scale. "
+            "Growth is only scored for feedback that came with real dates.",
             "Revenue at risk = unresolved complainants x average order value x assumed churn "
             "for the severity band. Change the assumptions in Settings.",
         ]
@@ -162,6 +173,11 @@ def to_markdown(report: Report) -> str:
             *[f"{i}. **{a['title']}** ({a['owner']}, effort {a['effort']}) — {a['detail']} "
               f"_Measure: {a['metric']}._" for i, a in enumerate(r["actions"], 1)], "",
         ]
+        insight = r.get("adaption")
+        if insight:
+            out += [f"Root-cause analysis by Adaption ({insight['messages_enriched']} distinct messages):"]
+            out += [f"- Cause: {c}" for c in insight["root_causes"]]
+            out += [f"- Fix: {a}" for a in insight["suggested_actions"]] + [""]
         if r["evidence"]:
             out += ["What customers said:", *[f"> “{e['text']}” (×{e['count']})" for e in r["evidence"]], ""]
         if r["compliance"]:

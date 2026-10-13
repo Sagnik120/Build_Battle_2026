@@ -145,3 +145,96 @@ def test_unmatched_adaption_file_is_rejected(client, seeded):
     payload = json.dumps({"completion": json.dumps({"sentiment": "positive"}), "feedback": "unknown text"}).encode()
     response = client.post(f"{API}/adaption/import", files={"file": ("bad.jsonl", io.BytesIO(payload))})
     assert response.status_code == 400 and response.json()["error"]["code"] == "adaption_no_match"
+
+
+def test_adaption_catch_all_theme_yields_to_a_specific_one(client, seeded):
+    text = "I suspect fraudulent activity as I was charged multiple times for a single purchase."
+    row = {"completion": json.dumps({
+        "ref": make_ref(fingerprint(text)), "sentiment": "negative", "is_complaint": True,
+        "resolved": False, "severity": 4, "theme": "fraud-other",
+    })}
+    client.post(f"{API}/adaption/import", files={"file": ("a.jsonl", io.BytesIO(json.dumps(row).encode()))})
+    item = client.get(f"{API}/feedback", params={"q": "charged multiple times for a single", "page_size": 1}).json()["items"][0]
+    assert item["analysis"]["engine"] == "adaption"
+    assert item["analysis"]["theme"]["label"] == "Charged multiple times"
+
+
+def test_new_feedback_is_sent_to_adaption_automatically(client, seeded, monkeypatch):
+    from app.core.config import get_settings
+    from app.core.database import session_scope
+    from app.integrations.adaption import service
+    from app.integrations.adaption.client import Estimate, RemoteStatus
+    from app.models import AdaptionRun
+
+    class FakeAdaption:
+        launched = 0
+
+        def upload_csv(self, path, name):
+            return "dataset-test"
+
+        def status(self, dataset_id):
+            return RemoteStatus("awaiting_input", 1, None, None)
+
+        def adapt(self, dataset_id, request, *, estimate):
+            if not estimate:
+                FakeAdaption.launched += 1
+            return Estimate(credits=1.0, minutes=11.0, run_id=None if estimate else "run-test")
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "adaption_api_key", "test-key")
+    monkeypatch.setattr(service, "get_client", lambda: FakeAdaption())
+
+    def newest_run():
+        return client.get(f"{API}/adaption/runs").json()["items"][0]
+
+    def close(run_id):
+        with session_scope() as db:
+            db.get(AdaptionRun, run_id).stage = "failed"
+
+    # Within the credit cap: queued on submit, launched as soon as the quote arrives.
+    client.post(f"{API}/feedback", json={"text": "Auto-enrich check: the coupon code box rejects every code."})
+    run = newest_run()
+    assert (run["stage"], run["scope"], run["options"]["auto"]) == ("ingesting", "pending", True)
+    run = client.post(f"{API}/adaption/runs/{run['id']}/advance").json()
+    assert run["stage"] == "running" and FakeAdaption.launched == 1
+
+    # One run at a time: a second submission does not open another.
+    client.post(f"{API}/feedback", json={"text": "Auto-enrich check: gift wrap option vanished at checkout."})
+    assert newest_run()["id"] == run["id"]
+    close(run["id"])
+
+    # Over the cap: the quote waits for a person to confirm.
+    monkeypatch.setattr(settings, "adaption_auto_max_credits", 0.5)
+    client.post(f"{API}/feedback", json={"text": "Auto-enrich check: invoice PDF downloads as a blank page."})
+    waiting = client.post(f"{API}/adaption/runs/{newest_run()['id']}/advance").json()
+    assert waiting["id"] != run["id"] and waiting["stage"] == "estimated" and FakeAdaption.launched == 1
+    close(waiting["id"])
+
+    # Daily limit reached: nothing is queued.
+    monkeypatch.setattr(settings, "adaption_auto_daily_runs", 2)
+    client.post(f"{API}/feedback", json={"text": "Auto-enrich check: wishlist empties itself after login."})
+    assert newest_run()["id"] == waiting["id"]
+
+
+def test_sample_snapshot_restores_adaption_output(client, seeded):
+    """Kept last: it enriches every sample message in the shared test database."""
+    from app.core.config import get_settings
+    from app.core.database import session_scope
+    from app.integrations.adaption.service import restore_sample_snapshot
+
+    settings = get_settings()
+    settings.adaption_sample_snapshot = True
+    try:
+        with session_scope() as db:
+            run = restore_sample_snapshot(db)
+            assert run is not None and (run.mode, run.rows_unmatched) == ("snapshot", 0)
+            assert run.rows_merged >= 317
+    finally:
+        settings.adaption_sample_snapshot = False
+
+    status = client.get(f"{API}/adaption/status").json()
+    assert status["enriched"] >= 317
+    top = client.get(f"{API}/recommendations").json()["items"][0]
+    assert top["adaption"]["root_causes"]
+    brief = client.get(f"{API}/analytics/brief").json()["lines"]
+    assert any("Adaption" in line for line in brief)

@@ -17,6 +17,7 @@ from app.intelligence.text import fingerprint
         ("This site is a scam. They took my money and never sent the product.", "negative"),
         ("Delivery was delayed, but the company provided a satisfactory explanation and compensation.", "mixed"),
         ("Delivery bahut late thi, bilkul bekar service.", "negative"),
+        ("Paisa kat gaya but order nahi aaya, bahut bekar service. No refund yet!", "negative"),
     ],
 )
 def test_sentiment_labels(text, label):
@@ -79,3 +80,14 @@ def test_priority_orders_by_harm_and_explains_itself():
     assert fraud.score > praise_adjacent.score
     assert fraud.tier == "P0" and fraud.reasons
     assert revenue_at_risk({4: 10}, 1000, {4: 0.5}) == 5000
+
+
+def test_simulated_dates_do_not_score_momentum():
+    real = score_theme(ThemeStats(500, 500, 500, 4.0, 4, 400, 100, 7000), max_complaints=500)
+    simulated = score_theme(
+        ThemeStats(500, 500, 500, 4.0, 4, 400, 100, 7000, has_trend=False), max_complaints=500
+    )
+    assert real.change_pct == 300.0 and any("Growing" in r for r in real.reasons)
+    assert simulated.change_pct is None and simulated.factors["momentum"] == 0
+    assert simulated.score == 100 and not simulated.trend_available
+    assert not any("Growing" in r for r in simulated.reasons)

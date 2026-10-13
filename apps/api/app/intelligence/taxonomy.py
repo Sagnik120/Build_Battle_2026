@@ -173,6 +173,8 @@ TAXONOMY: tuple[ThemeDef, ...] = (
 
 _COMPILED = tuple((t, t.compiled()) for t in TAXONOMY)
 BY_SLUG = {t.slug: t for t in TAXONOMY}
+# Themes that only apply when nothing more specific does.
+CATCH_ALL = frozenset({"fraud-other"})
 MATCH_THRESHOLD = 2.0
 
 

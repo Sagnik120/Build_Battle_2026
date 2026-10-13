@@ -135,7 +135,9 @@ function RecommendationCard({ rec }: { rec: Recommendation }) {
               <span className="text-sm text-muted-foreground">/ 100 priority</span>
             </div>
             <div className="mt-3 space-y-2.5">
-              {Object.entries(rec.priority.factors).map(([key, value]) => (
+              {Object.entries(rec.priority.factors)
+                .filter(([key]) => key !== "momentum" || rec.priority.trend_available)
+                .map(([key, value]) => (
                 <Meter key={key} value={value} label={FACTOR_META[key]?.label ?? key} hint={FACTOR_META[key]?.help} />
               ))}
             </div>
@@ -155,12 +157,14 @@ function RecommendationCard({ rec }: { rec: Recommendation }) {
                 {formatInrShort(rec.revenue_at_risk)}
               </dd>
             </div>
-            <div>
-              <dt className="text-xs text-muted-foreground">Change</dt>
-              <dd>
-                <Delta value={rec.priority.change_pct} goodWhen="down" className="text-sm" />
-              </dd>
-            </div>
+            {rec.priority.trend_available && (
+              <div>
+                <dt className="text-xs text-muted-foreground">Change</dt>
+                <dd>
+                  <Delta value={rec.priority.change_pct} goodWhen="down" className="text-sm" />
+                </dd>
+              </div>
+            )}
           </dl>
           <div>
             <div className="text-xs text-muted-foreground">Complaints over the period</div>
@@ -309,7 +313,7 @@ export function InsightsView() {
 
           <p className="text-xs text-muted-foreground">
             Priority score = {Object.entries(data.weights).map(([k, w]) => `${Math.round(w * 100)}% ${(FACTOR_META[k]?.label ?? k).toLowerCase()}`).join(" + ")}. Hover a factor to see what it measures.
-            {data.timeline_simulated && " Growth is measured on dates derived from row order, because the source file had no timestamps."}
+            {data.timeline_simulated && " Trend is left out of the score for feedback imported without real dates; the other three factors are re-weighted to 100%."}
           </p>
 
           {data.items.map((rec) => (

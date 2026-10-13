@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { SparklesIcon, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -33,12 +33,15 @@ export function AddFeedbackDialog({
   const [category, setCategory] = useState("");
   const [source, setSource] = useState("manual");
   const [result, setResult] = useState<FeedbackItem | null>(null);
+  const adaption = useQuery({ queryKey: ["adaption-status"], queryFn: api.adaptionStatus });
 
   const mutation = useMutation({
     mutationFn: () => api.submitFeedback({ text, category: category || undefined, source }),
     onSuccess: (item) => {
       setResult(item);
       queryClient.invalidateQueries();
+      // The Adaption run for this message is queued just after the response.
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ["adaption-sync"] }), 4000);
     },
     onError: (error) => toast.error(error.message),
   });
@@ -65,8 +68,9 @@ export function AddFeedbackDialog({
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <SentimentBadge sentiment={result.analysis.sentiment} />
               {result.analysis.is_complaint && <SeverityBadge severity={result.analysis.severity} />}
-              <span className="rounded-full border px-2 py-0.5 text-xs">{result.analysis.theme?.label ?? "No theme matched yet"}</span>
+              <span className="rounded-full border px-2 py-0.5 text-xs">{result.analysis.theme?.label ?? "New topic"}</span>
             </div>
+            <AdaptionPending show={adaption.data?.auto_enrich ?? false} />
             <DialogFooter>
               <Button variant="outline" onClick={() => { setResult(null); setText(""); }}>
                 Add another
@@ -141,6 +145,19 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
+function AdaptionPending({ show }: { show: boolean }) {
+  if (!show) return null;
+  return (
+    <p className="flex items-start gap-2 rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
+      <SparklesIcon className="mt-0.5 size-3.5 shrink-0" />
+      <span>
+        This is the instant read from the built-in engine. The message is also queued for Adaption, which adds the theme, likely root
+        cause and a suggested fix. Adaption jobs usually take 10–20 minutes; you will get a notice when it lands.
+      </span>
+    </p>
+  );
+}
+
 export function FeedbackDetail({ item, onClose, collapsed }: { item: FeedbackItem | null; onClose: () => void; collapsed: boolean }) {
   const queryClient = useQueryClient();
   const remove = useMutation({
@@ -154,6 +171,7 @@ export function FeedbackDetail({ item, onClose, collapsed }: { item: FeedbackIte
   });
   const a = item?.analysis;
   const fromAdaption = a?.engine === "adaption";
+  const adaption = useQuery({ queryKey: ["adaption-status"], queryFn: api.adaptionStatus });
 
   return (
     <Sheet open={item !== null} onOpenChange={(open) => !open && onClose()}>
@@ -178,7 +196,7 @@ export function FeedbackDetail({ item, onClose, collapsed }: { item: FeedbackIte
                   <span className="tabular">{a.score.toFixed(2)}</span>
                   <span className="text-muted-foreground"> · {Math.round(a.confidence * 100)}% confidence</span>
                 </Row>
-                <Row label="Theme">{a.theme?.label ?? "Uncategorised"}</Row>
+                <Row label="Theme">{a.theme?.label ?? "New topic"}</Row>
                 <Row label="Complaint">{a.is_complaint ? <SeverityBadge severity={a.severity} /> : "No"}</Row>
                 {a.is_complaint && <Row label="Resolution"><span className="capitalize">{a.resolution}</span></Row>}
                 <Row label="Analysed by">
@@ -201,6 +219,8 @@ export function FeedbackDetail({ item, onClose, collapsed }: { item: FeedbackIte
                   </ul>
                 </div>
               )}
+
+              {!fromAdaption && <AdaptionPending show={adaption.data?.auto_enrich ?? false} />}
 
               {(a.summary || a.root_cause || a.suggested_action) && (
                 <div className="space-y-3 rounded-lg border p-3">

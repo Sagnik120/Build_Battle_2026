@@ -73,7 +73,7 @@ apps/
       intelligence/            sentiment, lexicon, taxonomy, clustering/, priority, playbooks
       integrations/adaption/   client, prompts, mapper, run state machine
       seed/                    sample dataset
-    tests/                     31 tests (pytest)
+    tests/                     36 tests (pytest)
     requirements/              base / local / cloud
   web/                         Next.js 16 + React 19 + Tailwind v4 frontend
     src/

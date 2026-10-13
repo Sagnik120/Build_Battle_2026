@@ -75,6 +75,7 @@ export const api = {
   resetWorkspace: () => post<{ status: string }>("/system/reset?confirm=delete-everything"),
 
   dashboard: (filters: Params) => request<Dashboard>(`/analytics/dashboard${toQuery(filters)}`),
+  brief: (filters: Params) => request<{ lines: string[] }>(`/analytics/brief${toQuery(filters)}`),
   themes: (filters: Params) => request<{ items: ThemeRow[] }>(`/themes${toQuery(filters)}`),
   recommendations: (filters: Params) => request<Recommendations>(`/recommendations${toQuery(filters)}`),
   rerunAnalysis: () => post<{ analysed: number; engine: string }>("/analysis/run"),

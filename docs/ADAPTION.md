@@ -86,14 +86,63 @@ the adapted file back. The same mapper merges it.
 - **Honest provenance.** Every analysis records which engine produced it (`local-sklearn`,
   `local-lite` or `adaption`), and the UI shows it.
 
+## New feedback goes to Adaption automatically
+
+When feedback is submitted or imported and an API key is set, the messages Adaption has not read yet
+are queued for it in the background. The person sees the built-in engine's read instantly, and
+Adaption's theme, root cause and fix replace it when the job finishes (typically 10–20 minutes; a
+notice appears in the app and every screen refreshes).
+
+Because the deployment has no sign-in, spending is bounded:
+
+| Limit | Default | Setting |
+|---|---|---|
+| Runs at once | 1 (later messages join the next run) | — |
+| Credits per automatic run | 2; a dearer quote waits for a click on the Adaption page | `ADAPTION_AUTO_MAX_CREDITS` |
+| Automatic runs per 24 hours | 10 | `ADAPTION_AUTO_DAILY_RUNS` |
+| Switch | on | `ADAPTION_AUTO_ENRICH=false` turns it off |
+
+A message Adaption could not answer is not resent in a loop: a finished run only triggers another
+for feedback added after it started.
+
+## Two rules applied when merging
+
+- **Specific beats catch-all.** If Adaption files a message under the catch-all `fraud-other` theme
+  and the message plainly names a concrete problem (a duplicate charge, a missing order, a
+  misdescribed product), the specific theme is used. Adaption's sentiment, severity, root cause and
+  fix are kept as returned. The prompt also asks Adaption to prefer the specific theme.
+- **Repeated wording is collapsed.** Root causes and fixes shown on a recommendation are weighted by
+  how many customers sent the message, and near-identical sentences are dropped.
+
+## Saved output for the sample dataset
+
+The output of the live runs on the bundled sample is saved in
+[`adaption_sample.jsonl`](../apps/api/app/seed/adaption_sample.jsonl) (317 rows, in the same format
+as an Adaption download). When the sample dataset is loaded into an empty or reset workspace, that
+file is merged through the normal mapper and recorded as a run of type "saved output". A fresh
+deployment therefore shows Adaption's analysis immediately instead of waiting 15–20 minutes on a
+queued job. Anything imported or submitted afterwards is not covered by it and goes to Adaption
+through a live run. Turn it off with `ADAPTION_SAMPLE_SNAPSHOT=false`.
+
 ## What has and has not been verified
 
 - Verified by tests: dataset export, the mapper (fenced JSON, missing refs, new themes, unmatched
   rows), merge behaviour, protection from local re-analysis, the not-configured error path.
 - Verified against the installed SDK (`adaption` 0.14.0): every method name and parameter used.
-- **Not yet run against the live Adaption service**, because no API key was available while
-  building. The download format is therefore handled defensively (several possible completion
-  column names, three matching strategies). Do one small run with `max_rows` set before a demo.
+- Verified against the live Adaption service on 13 Oct 2026, through the API path, on the sample
+  dataset:
+
+  | Run | Scope | Rows sent | Rows merged | Unmatched | Credits quoted | Quality grade (before → after) |
+  |---|---|---|---|---|---|---|
+  | 1 | complaints, `max_rows=10` | 71 | 10 | 0 | 1 | A (9.0) → A (9.5) |
+  | 2 | all not yet enriched | 307 | 307 | 0 | 4 | A (10.0) → A (9.7) |
+
+  All 317 distinct messages (7,000 rows) now carry Adaption's analysis. Every completion came back
+  as valid JSON and matched by `ref`. Adaption kept to the supplied theme list and proposed no new
+  themes on this dataset.
+- Automatic enrichment verified live on 13 Oct 2026: one submitted message was uploaded, quoted
+  (1 credit), launched and merged with no clicks; it came back with a root cause and a fix.
+- Not exercised against the live service: the manual export/import path (covered by tests only).
 
 ## Files
 

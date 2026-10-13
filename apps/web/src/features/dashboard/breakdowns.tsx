@@ -92,6 +92,8 @@ export function SeverityBreakdown({ rows }: { rows: Dashboard["severity"] }) {
 }
 
 export function TopIssues({ issues, linkFor }: { issues: ThemeRow[]; linkFor: (themeId: number | null) => string }) {
+  // Period-over-period change only exists for feedback that came with real dates.
+  const showChange = issues.some((issue) => issue.priority.trend_available);
   return (
     <div className="-mx-5 overflow-x-auto">
       <table className="w-full min-w-[640px] text-sm">
@@ -100,7 +102,7 @@ export function TopIssues({ issues, linkFor }: { issues: ThemeRow[]; linkFor: (t
             <th className="py-2 pr-3 pl-5 font-medium">Issue</th>
             <th className="px-3 py-2 text-right font-medium">Complaints</th>
             <th className="px-3 py-2 text-right font-medium">Unresolved</th>
-            <th className="px-3 py-2 text-right font-medium">Change</th>
+            {showChange && <th className="px-3 py-2 text-right font-medium">Change</th>}
             <th className="px-3 py-2 font-medium">Trend</th>
             <th className="py-2 pr-5 pl-3 text-right font-medium">Priority</th>
           </tr>
@@ -116,9 +118,15 @@ export function TopIssues({ issues, linkFor }: { issues: ThemeRow[]; linkFor: (t
               </td>
               <td className="tabular px-3 text-right font-medium">{formatNumber(issue.complaints)}</td>
               <td className="tabular px-3 text-right text-muted-foreground">{issue.priority.unresolved_pct.toFixed(0)}%</td>
-              <td className="px-3 text-right">
-                <Delta value={issue.priority.change_pct} goodWhen="down" />
-              </td>
+              {showChange && (
+                <td className="px-3 text-right">
+                  {issue.priority.trend_available ? (
+                    <Delta value={issue.priority.change_pct} goodWhen="down" />
+                  ) : (
+                    <span className="text-xs text-muted-foreground">no dates</span>
+                  )}
+                </td>
+              )}
               <td className="px-3">
                 <Sparkline values={issue.series} />
               </td>

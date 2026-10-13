@@ -45,6 +45,7 @@ function StageIcon({ stage }: { stage: AdaptionRun["stage"] }) {
 function Quality({ quality }: { quality: NonNullable<AdaptionRun["quality"]> }) {
   if (!quality.grade_after && quality.score_after == null) return null;
   return (
+    <>
     <dl className="tabular mt-3 grid grid-cols-3 gap-px overflow-hidden rounded-lg border bg-border text-sm">
       <div className="bg-card p-3">
         <dt className="text-xs text-muted-foreground">Dataset grade</dt>
@@ -59,12 +60,22 @@ function Quality({ quality }: { quality: NonNullable<AdaptionRun["quality"]> }) 
         </dd>
       </div>
       <div className="bg-card p-3">
-        <dt className="text-xs text-muted-foreground">Improvement</dt>
-        <dd className="mt-0.5 font-semibold">{quality.improvement_percent != null ? `${quality.improvement_percent.toFixed(0)}%` : "—"}</dd>
+        <dt className="text-xs text-muted-foreground">Grade change</dt>
+        <dd className="mt-0.5 font-semibold">
+          {quality.improvement_percent != null
+            ? `${quality.improvement_percent > 0 ? "+" : ""}${quality.improvement_percent.toFixed(1)}%`
+            : "—"}
+        </dd>
       </div>
     </dl>
+    <p className="mt-2 text-xs text-muted-foreground">
+      Adaption&apos;s own grade of the dataset before and after the run. InsightFlow asks for compact JSON, not prose, so the grade is expected to stay roughly level.
+    </p>
+    </>
   );
 }
+
+const RUN_MODE_LABEL: Record<string, string> = { api: "API", manual: "manual import", snapshot: "saved output" };
 
 function RunCard({ run }: { run: AdaptionRun }) {
   const queryClient = useQueryClient();
@@ -81,7 +92,7 @@ function RunCard({ run }: { run: AdaptionRun }) {
           {active ? <ShimmeringText text={STAGE_COPY[run.stage]} /> : STAGE_COPY[run.stage]}
         </div>
         <span className="text-xs text-muted-foreground">
-          Run #{run.id} · {run.mode === "manual" ? "manual import" : "API"} · {formatDate(run.created_at, "d MMM, HH:mm")}
+          Run #{run.id} · {RUN_MODE_LABEL[run.mode] ?? run.mode}{run.options.auto ? " · automatic" : ""} · {formatDate(run.created_at, "d MMM, HH:mm")}
         </span>
       </div>
 
@@ -112,6 +123,12 @@ function RunCard({ run }: { run: AdaptionRun }) {
         {run.dataset_id && <div className="font-mono">dataset {run.dataset_id}</div>}
       </dl>
 
+      {run.mode === "snapshot" && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Restored from the saved output of the Adaption runs made on the sample dataset, so a new or reset workspace shows
+          Adaption&apos;s analysis straight away. Start a run above to send anything new to Adaption live.
+        </p>
+      )}
       {run.error && <p className="mt-2 text-sm text-rose-600 dark:text-rose-400">{run.error}</p>}
       {run.quality && <Quality quality={run.quality} />}
 
@@ -331,9 +348,13 @@ export function AdaptionView() {
             <div className="bg-card p-4">
               <div className="text-xs font-medium text-muted-foreground">Everything else is read by</div>
               <div className="mt-2 font-mono text-sm font-semibold">
-                {Object.keys(data.engines).filter((e) => e !== "adaption").join(", ") || "—"}
+                {Object.keys(data.engines).filter((e) => e !== "adaption").join(", ") || "Nothing left"}
               </div>
-              <div className="mt-1 text-xs text-muted-foreground">Built-in engine: always on, no credits, explains every score.</div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                {data.auto_enrich
+                  ? `New feedback is sent to Adaption automatically: one run at a time, up to ${data.auto_max_credits} credits a run and ${data.auto_daily_runs} runs a day.`
+                  : "Built-in engine: always on, no credits, explains every score."}
+              </div>
             </div>
           </div>
 

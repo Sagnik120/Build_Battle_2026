@@ -64,6 +64,7 @@ export interface Priority {
   change_pct: number | null;
   share_pct: number;
   unresolved_pct: number;
+  trend_available: boolean;
 }
 
 export interface ThemeRow {
@@ -224,6 +225,9 @@ export interface AdaptionStatus {
   configured: boolean;
   sdk_version: string | null;
   background_sync: boolean;
+  auto_enrich: boolean;
+  auto_max_credits: number;
+  auto_daily_runs: number;
   distinct_messages: number;
   enriched: number;
   coverage_pct: number;
@@ -239,7 +243,7 @@ export interface AdaptionStatus {
 
 export interface AdaptionRun {
   id: number;
-  mode: "api" | "manual";
+  mode: "api" | "manual" | "snapshot";
   stage: "ingesting" | "estimated" | "running" | "completed" | "failed";
   scope: string;
   dataset_id: string | null;

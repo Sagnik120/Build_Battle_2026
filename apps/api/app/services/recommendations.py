@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.intelligence.playbooks import get_playbook
 from app.intelligence.priority import DEFAULT_CHURN, WEIGHTS, revenue_at_risk
+from app.intelligence.text import tokenize
 from app.models import Analysis, Feedback, Issue, Setting
 from app.services.analytics import dataset_meta, fetch_cube, load_themes, theme_rollup, window_of
 from app.services.filters import FeedbackFilters
@@ -54,24 +55,44 @@ def _evidence(db: Session, theme_id: int | None, filters: FeedbackFilters, limit
     ]
 
 
+def _distinct(weighted: Counter, limit: int = 3, overlap: float = 0.3) -> list[str]:
+    """Most common statements first, skipping ones that mostly repeat an earlier one."""
+    kept: list[tuple[str, set[str]]] = []
+    for text, _ in weighted.most_common():
+        tokens = set(tokenize(text))
+        if any(len(tokens & seen) / max(1, len(tokens | seen)) >= overlap for _, seen in kept):
+            continue
+        kept.append((text, tokens))
+        if len(kept) == limit:
+            break
+    return [text for text, _ in kept]
+
+
 def _adaption_insight(db: Session, theme_id: int | None) -> dict | None:
     """Root causes and fixes Adaption generated for messages in this theme."""
     if theme_id is None:
         return None
     rows = db.execute(
-        select(Analysis.root_cause, Analysis.suggested_action, Analysis.summary)
+        select(Analysis.root_cause, Analysis.suggested_action, func.count(Feedback.id))
+        .join(Feedback, Feedback.fingerprint == Analysis.fingerprint)
         .where(Analysis.theme_id == theme_id, Analysis.engine == "adaption")
+        .group_by(Analysis.fingerprint, Analysis.root_cause, Analysis.suggested_action)
     ).all()
     if not rows:
         return None
-    causes = Counter(r[0].strip() for r in rows if r[0] and r[0].strip())
-    actions = Counter(r[1].strip() for r in rows if r[1] and r[1].strip())
+    causes: Counter = Counter()
+    actions: Counter = Counter()
+    for cause, action, occurrences in rows:
+        if cause and cause.strip():
+            causes[cause.strip()] += occurrences
+        if action and action.strip():
+            actions[action.strip()] += occurrences
     if not causes and not actions:
         return None
     return {
         "messages_enriched": len(rows),
-        "root_causes": [c for c, _ in causes.most_common(3)],
-        "suggested_actions": [a for a, _ in actions.most_common(3)],
+        "root_causes": _distinct(causes),
+        "suggested_actions": _distinct(actions),
     }
 
 

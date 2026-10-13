@@ -118,6 +118,8 @@ NEGATORS = frozenset(
     {"not", "no", "never", "neither", "nor", "without", "wasn't", "isn't", "didn't", "don't",
      "doesn't", "couldn't", "won't", "cannot", "can't", "nahi", "nahin", "mat"}
 )
+# Hindi negators attach to the verb beside them ("order nahi aaya"), not to what follows.
+SHORT_NEGATORS = frozenset({"nahi", "nahin", "mat"})
 INTENSIFIERS: dict[str, float] = {
     "very": 1.3, "extremely": 1.5, "incredibly": 1.5, "highly": 1.3, "really": 1.25,
     "absolutely": 1.4, "totally": 1.3, "so": 1.15, "too": 1.2, "bahut": 1.4, "bilkul": 1.4,

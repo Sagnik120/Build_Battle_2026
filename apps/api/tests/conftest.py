@@ -7,6 +7,7 @@ os.environ["DATABASE_URL"] = os.environ.get("TEST_DATABASE_URL", f"sqlite:///{_t
 os.environ["AUTO_SEED"] = "false"
 os.environ["ADAPTION_API_KEY"] = ""
 os.environ["APP_PROFILE"] = "local"
+os.environ["ADAPTION_SAMPLE_SNAPSHOT"] = "false"
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

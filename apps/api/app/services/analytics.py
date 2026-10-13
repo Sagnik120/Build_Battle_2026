@@ -33,6 +33,7 @@ class Cell:
     resolution: str
     severity: int
     theme_id: int | None
+    simulated: bool  # date was assigned at import, not real
     count: int
     score_sum: float
 
@@ -52,6 +53,7 @@ def fetch_cube(db: Session, filters: FeedbackFilters) -> list[Cell]:
     cols = (
         Feedback.day, Feedback.category, Feedback.source, Analysis.sentiment,
         Analysis.is_complaint, Analysis.resolution, Analysis.severity, Analysis.theme_id,
+        Feedback.time_simulated,
     )
     stmt = (
         select(*cols, func.count(Feedback.id), func.sum(Analysis.score))
@@ -122,7 +124,7 @@ def theme_rollup(cells: list[Cell], window: Window, themes: dict[int, Theme]) ->
     total_feedback = sum(c.count for c in cells)
     acc: dict[int | None, dict] = defaultdict(
         lambda: {"mentions": 0, "complaints": 0, "unresolved": 0, "sev_sum": 0, "recent": 0,
-                 "previous": 0, "positive": 0, "unresolved_by_sev": defaultdict(int),
+                 "previous": 0, "positive": 0, "simulated": 0, "unresolved_by_sev": defaultdict(int),
                  "series": defaultdict(int)}
     )
     granularity = _granularity(window)
@@ -134,6 +136,8 @@ def theme_rollup(cells: list[Cell], window: Window, themes: dict[int, Theme]) ->
         if c.is_complaint:
             a["complaints"] += c.count
             a["sev_sum"] += c.severity * c.count
+            if c.simulated:
+                a["simulated"] += c.count
             a["series"][_bucket(c.day, granularity)] += c.count
             if c.resolution == "unresolved":
                 a["unresolved"] += c.count
@@ -154,7 +158,7 @@ def theme_rollup(cells: list[Cell], window: Window, themes: dict[int, Theme]) ->
             mentions=a["mentions"], complaints=a["complaints"], unresolved=a["unresolved"],
             severity_avg=a["sev_sum"] / a["complaints"] if a["complaints"] else 1.0,
             impact=impact, recent=a["recent"], previous=a["previous"],
-            total_feedback=total_feedback,
+            total_feedback=total_feedback, has_trend=a["simulated"] == 0,
         )
         priority = score_theme(stats, max_complaints)
         rows.append(
@@ -224,7 +228,8 @@ def dashboard(db: Session, filters: FeedbackFilters) -> dict:
     previous = [c for c in cells if c.day < window.mid]
     kpis, k_recent, k_prev = _kpis(cells), _kpis(recent), _kpis(previous)
     change = None
-    if previous and recent:
+    # Period-over-period change means nothing when the dates were simulated.
+    if previous and recent and not any(c.simulated for c in cells):
         vol = growth(k_recent["total"], k_prev["total"])
         change = {
             "total_pct": None if vol is None else round(100 * vol, 1),

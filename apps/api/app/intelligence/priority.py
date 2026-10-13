@@ -27,6 +27,7 @@ class ThemeStats:
     recent: int  # complaints in the later half of the window
     previous: int  # complaints in the earlier half
     total_feedback: int  # denominator for share
+    has_trend: bool = True  # False when the dates were simulated at import
 
 
 @dataclass(slots=True)
@@ -39,6 +40,7 @@ class Priority:
     change_pct: float | None
     share_pct: float
     unresolved_pct: float
+    trend_available: bool = True
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -54,7 +56,8 @@ def score_theme(stats: ThemeStats, max_complaints: int) -> Priority:
     reach = math.sqrt(stats.complaints / max_complaints) if max_complaints else 0.0
     severity = ((stats.severity_avg + stats.impact) / 2 - 1) / 3
     unresolved = stats.unresolved / stats.complaints if stats.complaints else 0.0
-    change = growth(stats.recent, stats.previous)
+    # Simulated dates carry no information about growth, so they are not scored.
+    change = growth(stats.recent, stats.previous) if stats.has_trend else None
     momentum = max(0.0, min(1.0, change or 0.0))
 
     factors = {
@@ -63,7 +66,8 @@ def score_theme(stats: ThemeStats, max_complaints: int) -> Priority:
         "unresolved": round(unresolved, 3),
         "momentum": round(momentum, 3),
     }
-    score = round(100 * sum(WEIGHTS[k] * v for k, v in factors.items()))
+    weights = WEIGHTS if stats.has_trend else {k: w for k, w in WEIGHTS.items() if k != "momentum"}
+    score = round(100 * sum(w * factors[k] for k, w in weights.items()) / sum(weights.values()))
     tier = next(t for threshold, t in TIERS if score >= threshold)
     share = 100 * stats.complaints / stats.total_feedback if stats.total_feedback else 0.0
 
@@ -86,6 +90,8 @@ def score_theme(stats: ThemeStats, max_complaints: int) -> Priority:
         reasons.append(f"Growing: up {change:.0%} versus the earlier half of the period.")
     elif change is not None and change <= -0.15:
         reasons.append(f"Easing: down {abs(change):.0%} versus the earlier half of the period.")
+    if not stats.has_trend:
+        reasons.append("Trend not scored: this feedback was imported without real dates.")
 
     return Priority(
         score=score,
@@ -96,6 +102,7 @@ def score_theme(stats: ThemeStats, max_complaints: int) -> Priority:
         change_pct=None if change is None else round(100 * change, 1),
         share_pct=round(share, 2),
         unresolved_pct=round(100 * unresolved, 1),
+        trend_available=stats.has_trend,
     )
 
 

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.schemas.requests import AssumptionsUpdate
-from app.services import analytics, recommendations
+from app.services import analytics, recommendations, reports
 from app.services.filters import FeedbackFilters, filter_params
 from app.services.pipeline import analyze_pending, engine_name
 
@@ -17,6 +17,15 @@ router = APIRouter(tags=["insights"])
 @router.get("/analytics/dashboard")
 def get_dashboard(filters: FeedbackFilters = Depends(filter_params), db: Session = Depends(get_db, scope="function")) -> dict:
     return analytics.dashboard(db, filters)
+
+
+@router.get("/analytics/brief")
+def get_brief(filters: FeedbackFilters = Depends(filter_params), db: Session = Depends(get_db, scope="function")) -> dict:
+    """The current findings as a few plain sentences."""
+    dash = analytics.dashboard(db, filters)
+    if dash["empty"]:
+        return {"lines": []}
+    return {"lines": reports.executive_summary(dash, recommendations.build_recommendations(db, filters))}
 
 
 @router.get("/themes")

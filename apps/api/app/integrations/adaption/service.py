@@ -22,12 +22,14 @@ import logging
 import re
 import tempfile
 import uuid
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.database import session_scope
 from app.core.errors import AppError, ConflictError, IntegrationError, NotFoundError
 from app.integrations.adaption import mapper
 from app.integrations.adaption.client import get_client, sdk_version
@@ -38,13 +40,14 @@ from app.integrations.adaption.prompts import (
     UNIVERSAL_PROMPT,
     adapt_request,
 )
-from app.intelligence.taxonomy import BY_SLUG
+from app.intelligence.taxonomy import BY_SLUG, CATCH_ALL, match_theme
 from app.models import AdaptionRun, Analysis, Feedback, Theme
 from app.models.adaption import ACTIVE_STAGES
 from app.models.mixins import iso
 from app.services.pipeline import ensure_known_themes
 
 logger = logging.getLogger("insightflow.adaption")
+SAMPLE_SNAPSHOT = Path(__file__).resolve().parents[2] / "seed" / "adaption_sample.jsonl"
 _SLUG = re.compile(r"[^a-z0-9]+")
 
 
@@ -101,6 +104,14 @@ def _theme_id_for(db: Session, value: str, known: dict[str, int]) -> int | None:
     return theme.id
 
 
+def _specific_theme_id(text: str, analysis: Analysis, known: dict[str, int]) -> int | None:
+    """A catch-all theme from Adaption yields to a specific one the taxonomy can evidence."""
+    specific = match_theme(text, sentiment=analysis.sentiment, is_complaint=analysis.is_complaint)
+    if specific is None or specific.slug in CATCH_ALL or specific.polarity != "issue":
+        return None
+    return known[specific.slug]
+
+
 def merge_export(db: Session, run: AdaptionRun, raw: bytes) -> None:
     """Parse an adapted dataset and write it over the matching analyses."""
     try:
@@ -119,6 +130,13 @@ def merge_export(db: Session, run: AdaptionRun, raw: bytes) -> None:
             select(Analysis).where(Analysis.fingerprint.in_([e.fingerprint for e in enrichments]))
         ).all()
     }
+    texts = dict(
+        db.execute(
+            select(Feedback.fingerprint, func.min(Feedback.text))
+            .where(Feedback.fingerprint.in_(list(analyses)))
+            .group_by(Feedback.fingerprint)
+        ).all()
+    )
     merged = 0
     for enrichment in enrichments:
         analysis = analyses.get(enrichment.fingerprint)
@@ -128,6 +146,10 @@ def merge_export(db: Session, run: AdaptionRun, raw: bytes) -> None:
         for key, value in enrichment.fields.items():
             setattr(analysis, key, value)
         if enrichment.theme and (theme_id := _theme_id_for(db, enrichment.theme, known)):
+            if enrichment.theme.strip().strip('"').lower() in CATCH_ALL:
+                theme_id = _specific_theme_id(
+                    texts.get(analysis.fingerprint, ""), analysis, known
+                ) or theme_id
             analysis.theme_id = theme_id
             theme = db.get(Theme, theme_id)
             if theme and theme.kind == "adaption" and not analysis.is_complaint:
@@ -158,6 +180,9 @@ def integration_status(db: Session) -> dict:
         "configured": settings.adaption_configured,
         "sdk_version": sdk_version(),
         "background_sync": bool(settings.background_sync),
+        "auto_enrich": settings.adaption_configured and settings.adaption_auto_enrich,
+        "auto_max_credits": settings.adaption_auto_max_credits,
+        "auto_daily_runs": settings.adaption_auto_daily_runs,
         "distinct_messages": total,
         "enriched": engines.get("adaption", 0),
         "coverage_pct": round(100 * engines.get("adaption", 0) / total, 1) if total else 0.0,
@@ -251,6 +276,8 @@ def advance(db: Session, run: AdaptionRun) -> AdaptionRun:
                 quote = client.adapt(run.dataset_id, _request(run), estimate=True)
                 run.estimated_credits, run.estimated_minutes = quote.credits, quote.minutes
                 run.stage = "estimated"
+                if _auto_launch_allowed(run):
+                    launch(db, run)
         elif run.stage == "running":
             run.progress_percent = remote.percent
             if remote.status == "failed":
@@ -266,6 +293,9 @@ def advance(db: Session, run: AdaptionRun) -> AdaptionRun:
                     logger.warning("Adaption evaluation unavailable: %s", exc.message)
                 run.progress_percent = 100
                 run.stage = "completed"
+                if run.options.get("auto"):
+                    db.flush()
+                    maybe_auto_enrich(db, newer_than=run.options.get("max_feedback_id", 0))
     except AppError as exc:
         if exc.code in ("adaption_rate_limit", "adaption_unreachable"):
             logger.info("Adaption temporarily unavailable; will retry: %s", exc.message)
@@ -296,12 +326,97 @@ def cancel(db: Session, run: AdaptionRun) -> AdaptionRun:
     return run
 
 
+# ---------------------------------------------------------------------- automatic mode
+def _auto_launch_allowed(run: AdaptionRun) -> bool:
+    """An automatic run starts by itself only when its quote is within the per-run cap."""
+    if not run.options.get("auto") or run.estimated_credits is None:
+        return False
+    return run.estimated_credits <= get_settings().adaption_auto_max_credits
+
+
+def maybe_auto_enrich(db: Session, *, newer_than: int | None = None) -> AdaptionRun | None:
+    """Queue the messages Adaption has not read yet, if automatic enrichment may run now.
+
+    One run at a time, a daily run limit, and a per-run credit cap (checked when
+    the quote arrives). ``newer_than`` restricts the trigger to feedback added
+    after a given row id, so a message Adaption could not answer is not resent
+    in a loop.
+    """
+    settings = get_settings()
+    if not (settings.adaption_configured and settings.adaption_auto_enrich):
+        return None
+    if db.scalar(select(func.count()).select_from(AdaptionRun).where(
+            AdaptionRun.stage.in_((*ACTIVE_STAGES, "estimated")))):
+        return None
+    day_ago = datetime.now(timezone.utc) - timedelta(days=1)
+    recent = db.scalars(select(AdaptionRun).where(AdaptionRun.created_at >= day_ago)).all()
+    if sum(1 for r in recent if r.options.get("auto")) >= settings.adaption_auto_daily_runs:
+        logger.info("Automatic Adaption enrichment paused: daily run limit reached")
+        return None
+    pending = (
+        select(func.count(func.distinct(Feedback.fingerprint)))
+        .join(Analysis, Analysis.fingerprint == Feedback.fingerprint)
+        .where(Analysis.engine != "adaption")
+    )
+    if newer_than is not None:
+        pending = pending.where(Feedback.id > newer_than)
+    if not db.scalar(pending):
+        return None
+    try:
+        run = create_run(db, scope="pending", max_rows=None, reasoning_traces=False)
+    except AppError as exc:
+        logger.warning("Automatic Adaption enrichment could not start: %s", exc.message)
+        return None
+    run.options = {
+        **run.options, "auto": True, "max_feedback_id": db.scalar(select(func.max(Feedback.id))) or 0,
+    }
+    db.flush()
+    logger.info("Automatic Adaption run %s queued for %d messages", run.id, run.rows_sent)
+    return run
+
+
+def auto_enrich_job() -> None:
+    """Background-task entry point: runs after the response, in its own transaction."""
+    try:
+        with session_scope() as db:
+            maybe_auto_enrich(db)
+    except Exception:  # enrichment is a bonus; it must never surface as a request failure
+        logger.exception("Automatic Adaption enrichment failed")
+
+
 # ------------------------------------------------------------------------ manual mode
 def import_manual(db: Session, raw: bytes, filename: str) -> AdaptionRun:
     run = AdaptionRun(mode="manual", stage="completed", scope="all", options={"filename": filename})
     db.add(run)
     db.flush()
     merge_export(db, run, raw)
+    run.rows_sent = run.rows_merged + run.rows_unmatched
+    db.flush()
+    return run
+
+
+# --------------------------------------------------------------------- sample snapshot
+def restore_sample_snapshot(db: Session) -> AdaptionRun | None:
+    """Re-apply the saved output of the Adaption runs made on the bundled sample dataset.
+
+    A fresh or reset workspace then shows Adaption's analysis straight away instead
+    of waiting on a queued job. Only messages present in the snapshot are touched.
+    """
+    if not get_settings().adaption_sample_snapshot or not SAMPLE_SNAPSHOT.exists():
+        return None
+    run = AdaptionRun(
+        mode="snapshot", stage="completed", scope="all", options={"filename": SAMPLE_SNAPSHOT.name}
+    )
+    db.add(run)
+    db.flush()
+    try:
+        with db.begin_nested():
+            merge_export(db, run, SAMPLE_SNAPSHOT.read_bytes())
+    except AppError as exc:
+        logger.warning("Adaption sample snapshot not applied: %s", exc.message)
+        db.delete(run)
+        db.flush()
+        return None
     run.rows_sent = run.rows_merged + run.rows_unmatched
     db.flush()
     return run

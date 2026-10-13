@@ -25,7 +25,7 @@ Keys (all required):
 - "is_complaint": true if the customer reports a problem, even one that was later fixed.
 - "resolved": true if the feedback says the problem was fixed, refunded, replaced or compensated; false if it was not; null if there was no problem.
 - "severity": 1 (no problem), 2 (inconvenience), 3 (order or product unusable, or issue left unresolved), 4 (fraud, lost money, counterfeit goods).
-- "theme": the best-fitting slug from the list below, or "new: <3-5 word label>" if none fits.
+- "theme": the most specific fitting slug from the list below, or "new: <3-5 word label>" if none fits. Use "fraud-other" only when the feedback names no concrete problem such as a duplicate charge, a missing order or a misdescribed product.
 - "root_cause": one sentence naming the most likely operational root cause; null for praise.
 - "suggested_action": one sentence with the single most useful fix the business can make; null for praise.
 - "summary": at most 15 words, plain English.
